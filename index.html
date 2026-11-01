@@ -1,0 +1,1925 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>通用型自然探究（KB 知識翻新）智慧對話與研究監測平台</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    @keyframes pulseBorder {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+      50% { box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.22); }
+    }
+    .flash-highlight {
+      animation: pulseBorder 1.1s ease-in-out 2;
+    }
+    @keyframes thinkingDots {
+      0%, 20% { opacity: 0.2; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-4px); }
+      80%, 100% { opacity: 0.2; transform: translateY(0); }
+    }
+    .dot-1 { animation: thinkingDots 1.3s infinite 0.1s; }
+    .dot-2 { animation: thinkingDots 1.3s infinite 0.3s; }
+    .dot-3 { animation: thinkingDots 1.3s infinite 0.5s; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+          KB
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-sm sm:text-base text-slate-900">通用型探究實作（KB 知識翻新）開放對話系統</h1>
+            <span id="header-classroom-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+              目前教室：不同溶液溶解保麗龍
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center & Right Controls: Gemini API Status & View Switcher -->
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <!-- Gemini API Key Status Pill -->
+        <button id="btn-open-api-modal" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer bg-slate-50 border-slate-300 hover:border-indigo-400">
+          <span id="api-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span id="api-status-text" class="text-slate-700">Gemini: 模擬引擎</span>
+          <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">設定金鑰</span>
+        </button>
+
+        <!-- View Mode Switcher (Student Clean View vs Teacher Backend vs Split View) -->
+        <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs">
+          <button id="mode-btn-student" class="px-3 py-1.5 rounded-lg font-semibold transition bg-white text-indigo-700 shadow-xs cursor-pointer">
+            🎓 學生端介面
+          </button>
+          <button id="mode-btn-teacher" class="px-3 py-1.5 rounded-lg font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer">
+            👩‍🏫 教師管理＆數據後台
+          </button>
+          <button id="mode-btn-split" class="px-3 py-1.5 rounded-lg font-semibold transition text-slate-600 hover:text-slate-900 hidden md:inline-block cursor-pointer">
+            🖥️ 同屏展示
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Banner -->
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden bg-slate-900 text-white text-xs sm:text-sm px-4 py-3 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2.5 max-w-md">
+    <span id="toast-icon">✨</span>
+    <span id="toast-text">系統訊息</span>
+  </div>
+
+  <!-- Main Workspace Container -->
+  <main id="main-grid" class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 grid grid-cols-1 gap-5">
+
+    <!-- ========================================================================= -->
+    <!-- 1. STUDENT INTERFACE (CLEAN, FOCUSED AI INTERACTION + SEAT & GROUP INPUT) -->
+    <!-- ========================================================================= -->
+    <section id="panel-student" class="w-full max-w-3xl mx-auto flex flex-col gap-3">
+
+      <!-- Student Login / Seat & Group Configuration Bar -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3 flex-1">
+            <!-- Classroom Selector -->
+            <div class="flex items-center gap-1.5">
+              <label for="student-classroom-select" class="text-xs font-semibold text-slate-500 shrink-0">課程教室：</label>
+              <select id="student-classroom-select" class="text-xs sm:text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-indigo-600">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+
+            <!-- Group Selector / Input -->
+            <div class="flex items-center gap-1.5">
+              <label for="student-group-input" class="text-xs font-semibold text-slate-500 shrink-0">組別：</label>
+              <select id="student-group-input" class="text-xs sm:text-sm font-semibold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-indigo-600">
+                <option value="第 1 組">第 1 組</option>
+                <option value="第 2 組">第 2 組</option>
+                <option value="第 3 組" selected>第 3 組</option>
+                <option value="第 4 組">第 4 組</option>
+                <option value="第 5 組">第 5 組</option>
+                <option value="第 6 組">第 6 組</option>
+              </select>
+            </div>
+
+            <!-- Seat Number Input -->
+            <div class="flex items-center gap-1.5">
+              <label for="student-seat-input" class="text-xs font-semibold text-slate-500 shrink-0">座號：</label>
+              <input id="student-seat-input" type="number" min="1" max="50" value="12" class="w-16 text-xs sm:text-sm font-bold text-center text-indigo-700 bg-indigo-50/60 border border-indigo-300 rounded-xl px-2 py-1.5 focus:outline-none focus:border-indigo-600" placeholder="座號" />
+            </div>
+
+            <!-- Apply Identity Button -->
+            <button id="btn-apply-student-id" class="text-xs bg-slate-900 hover:bg-slate-800 text-white font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+              確認身分
+            </button>
+          </div>
+
+          <!-- Current Student Badge & LLM Active Tag -->
+          <div class="flex items-center gap-2">
+            <span id="student-llm-tag" class="text-[11px] px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              ⚡ 模擬知識引擎
+            </span>
+            <span id="student-identity-pill" class="text-xs font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+              👤 第 3 組・12 號同學
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Clean Chat Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden min-h-[580px]">
+
+        <!-- Top Bar inside Chat: Topic Header + Material Toggle + Personal/Group Chat Switch -->
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <h2 id="student-topic-title" class="font-bold text-sm sm:text-base text-slate-900">
+                探究主題：不同溶液溶解保麗龍
+              </h2>
+              <button id="btn-toggle-material" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline cursor-pointer">
+                📖 查看老師提供的教材提示
+              </button>
+            </div>
+            <p id="student-topic-subtitle" class="text-xs text-slate-500 mt-0.5">
+              不論詢問科學原理、材料特性、預熱受熱反應或實驗疑問，AI 都會【直接給出真正的科學答案】！
+            </p>
+          </div>
+
+          <!-- Switch between Personal AI Chat & Group AI Chat -->
+          <div class="inline-flex rounded-xl bg-slate-200/80 p-1 text-xs">
+            <button id="chat-space-personal" class="px-3 py-1.5 rounded-lg font-bold transition bg-white text-indigo-700 shadow-xs cursor-pointer">
+              👤 個人與 AI 對話
+            </button>
+            <button id="chat-space-group" class="px-3 py-1.5 rounded-lg font-bold transition text-slate-600 hover:text-slate-900 cursor-pointer">
+              👥 小組共構對話 (<span id="group-tab-label">第 3 組</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapsible Teacher Material Box (Hidden by default to keep UI clean) -->
+        <div id="student-material-drawer" class="hidden bg-amber-50/80 border-b border-amber-200 px-4 py-3 text-xs text-slate-700 space-y-1">
+          <div class="font-bold text-amber-900 flex items-center justify-between">
+            <span>📘 本堂課教材與觀察提示（由任課教師設定）：</span>
+            <button id="btn-close-material" class="text-amber-700 hover:text-amber-950 font-bold cursor-pointer">✕ 收合</button>
+          </div>
+          <p id="student-material-content" class="leading-relaxed whitespace-pre-line"></p>
+        </div>
+
+        <!-- Chat Message Stream -->
+        <div id="student-chat-stream" class="flex-1 p-4 space-y-3.5 overflow-y-auto custom-scroll max-h-[440px] bg-slate-50/40">
+          <!-- Messages rendered by JS -->
+        </div>
+
+        <!-- Thinking Indicator (Shown while waiting for Gemini API) -->
+        <div id="thinking-indicator" class="hidden px-4 py-2 flex items-center gap-2 bg-slate-50 border-t border-slate-100 text-xs text-indigo-600 font-medium">
+          <div class="flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dot-1"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dot-2"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 dot-3"></span>
+          </div>
+          <span id="thinking-text">AI 探究夥伴正在深入思考中...</span>
+        </div>
+
+        <!-- Bottom Input Section: Non-enforced KB Scaffolds + Clean Input Box -->
+        <div class="p-3.5 bg-white border-t border-slate-200 space-y-2.5">
+          <!-- Universal KB Open Scaffolds -->
+          <div>
+            <div class="text-[11px] text-slate-400 font-medium mb-1.5 flex items-center justify-between">
+              <span>可選思考鷹架（點擊自動帶入開頭，亦可直接自由提問）：</span>
+              <span id="space-mode-indicator" class="text-indigo-600 font-semibold">目前空間：👤 個人探究對話</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button data-scaffold="❓ [好奇提問]" data-prefix="❓ [好奇提問] 我想請問為什麼" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-medium transition cursor-pointer">
+                ❓ 我好奇／想請問…
+              </button>
+              <button data-scaffold="📚 [科學知識]" data-prefix="📚 [科學知識] 我想了解關於這個材料／主題的背景知識：" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-medium transition cursor-pointer">
+                📚 我想了解材料分類／常識…
+              </button>
+              <button data-scaffold="🧪 [實驗與操作]" data-prefix="🧪 [實驗與操作] 如果我們想測試看看" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-medium transition cursor-pointer">
+                🧪 實驗步驟／如果我們測試…
+              </button>
+              <button data-scaffold="🔍 [分享觀察]" data-prefix="🔍 [分享觀察] 我剛剛發現一個現象：" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-medium transition cursor-pointer">
+                🔍 我觀察到的現象是…
+              </button>
+              <button data-scaffold="💡 [我的想法]" data-prefix="💡 [我的想法] 關於這個問題，我目前的猜測是：" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-medium transition cursor-pointer">
+                💡 我的想法／猜測是…
+              </button>
+              <button data-scaffold="⚖️ [觀點討論]" data-prefix="⚖️ [觀點討論] 聽完同學說的，我有不一樣的看法：" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-medium transition cursor-pointer">
+                ⚖️ 討論不同觀點…
+              </button>
+              <button data-scaffold="🚀 [超越整合]" data-prefix="🚀 [超越整合] 把大家的發現跟討論整合起來，我們認為更合理的解釋是：" class="scaffold-chip text-xs px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold transition cursor-pointer">
+                🚀 綜合大家的想法 (Rise Above)…
+              </button>
+            </div>
+          </div>
+
+          <!-- Input Box + Send Button -->
+          <div class="flex gap-2">
+            <textarea id="student-chat-input" rows="2" class="flex-1 text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-600 bg-white resize-none" placeholder="輸入你想問的問題（如：保麗龍是什麼？）、觀察到的現象或想法... (Shift+Enter 換行，Enter 發送)"></textarea>
+            <button id="btn-student-send" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-xl transition shadow-xs shrink-0 flex items-center justify-center cursor-pointer">
+              <span>傳送</span>
+            </button>
+          </div>
+
+          <!-- Real-world Test Quick Buttons -->
+          <div class="pt-1 border-t border-slate-100 flex flex-wrap items-center justify-between gap-1.5 text-[11px] text-slate-400">
+            <span>🧪 點擊快速測試學生的各類真實提問：</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button id="btn-test-replace" class="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold transition cursor-pointer border border-emerald-300">
+                🌱 測試提問：「保麗龍可以用什麼取代？」
+              </button>
+              <button id="btn-test-heat" class="px-2 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold transition cursor-pointer border border-rose-300">
+                🔥 測試提問：「保麗龍預熱會有什麼樣的反應」
+              </button>
+              <button id="btn-test-what-is" class="px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-800 font-bold transition cursor-pointer border border-blue-300">
+                📌 測試提問：「保麗龍是什麼？」
+              </button>
+              <button id="btn-test-category" class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium transition cursor-pointer border border-indigo-200">
+                測試提問：「保麗龍有分類嗎」
+              </button>
+              <button id="btn-quick-misconception" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 transition cursor-pointer">
+                測試「迷思概念發言」
+              </button>
+              <button id="btn-quick-circular" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-purple-50 hover:text-purple-800 text-slate-600 transition cursor-pointer">
+                測試「實驗步驟操作疑問」
+              </button>
+              <button id="btn-quick-riseabove" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-600 transition cursor-pointer">
+                測試「高階整合 (Rise Above)」
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- 2. TEACHER / RESEARCHER BACKEND (CREATE CLASSROOM + MONITOR DATA)         -->
+    <!-- ========================================================================= -->
+    <section id="panel-teacher" class="hidden w-full flex flex-col gap-4">
+
+      <!-- Teacher Backend Header & Navigation Tabs -->
+      <div class="bg-slate-900 text-white rounded-2xl p-4 shadow-sm border border-slate-800">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h2 class="font-bold text-base sm:text-lg">👩‍🏫 教師課程管理 ＆ 研究數據即時監測後台</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">
+              自由開設新教室、編輯教材與引導原則，支援直接連線 Google Gemini 官方 API 進行即時對話與自動質性編碼
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-header-setup-api" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1">
+              <span>🔑 設定 Gemini API Key</span>
+            </button>
+            <button id="btn-export-modal" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+              📥 匯出研究數據 (CSV / JSON)
+            </button>
+          </div>
+        </div>
+
+        <!-- Teacher Sub-tabs -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 bg-slate-800 p-1 rounded-xl text-xs">
+          <button id="ttab-btn-monitor" class="py-2 px-3 rounded-lg font-bold transition bg-indigo-600 text-white cursor-pointer">
+            📊 1. 學生與小組數據監測（多層次分析）
+          </button>
+          <button id="ttab-btn-classrooms" class="py-2 px-3 rounded-lg font-bold transition text-slate-300 hover:text-white cursor-pointer">
+            🏫 2. 開設新教室 ＆ 編輯教材與引導原則
+          </button>
+          <button id="ttab-btn-logs" class="py-2 px-3 rounded-lg font-bold transition text-slate-300 hover:text-white cursor-pointer">
+            🗂️ 3. 即時對話紀錄 ＆ 自動編碼明細
+          </button>
+        </div>
+      </div>
+
+      <!-- ================= TEACHER TAB 1: DATA MONITORING DASHBOARD ================= -->
+      <div id="tview-monitor" class="space-y-4">
+
+        <!-- Multi-level Filter Bar (Classroom / Group / Individual Seat) -->
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-3 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-600">篩選教室：</span>
+              <select id="filter-classroom" class="border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 bg-slate-50">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-600">篩選組別：</span>
+              <select id="filter-group" class="border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 bg-slate-50">
+                <option value="ALL">全部組別</option>
+                <option value="第 1 組">第 1 組</option>
+                <option value="第 2 組">第 2 組</option>
+                <option value="第 3 組">第 3 組</option>
+                <option value="第 4 組">第 4 組</option>
+                <option value="第 5 組">第 5 組</option>
+                <option value="第 6 組">第 6 組</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-slate-600">篩選學生座號：</span>
+              <select id="filter-seat" class="border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 bg-slate-50">
+                <option value="ALL">全部座號（個人＋小組）</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="text-xs text-slate-500 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>即時連動中：學生在前端對話，數據會即時更新</span>
+          </div>
+        </div>
+
+        <!-- 4 Summary KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs text-slate-500">累積對話與自動編碼數</div>
+            <div id="kpi-count" class="text-xl font-bold text-slate-900 mt-1">6 筆</div>
+            <div class="text-[11px] text-indigo-600 mt-0.5">含個人與小組對話</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs text-slate-500">平均想法深化度 (Idea Depth)</div>
+            <div id="kpi-avg-r" class="text-xl font-bold text-emerald-600 mt-1">2.1 / 3.0</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">0-3分即時語意評分</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs text-slate-500">知識翻新 Rise Above 次數</div>
+            <div id="kpi-rise-above" class="text-xl font-bold text-amber-600 mt-1">2 次</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">整合多元觀點與證據</div>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="text-xs text-slate-500">科學事實/分類解惑次數</div>
+            <div id="kpi-misconceptions" class="text-xl font-bold text-blue-600 mt-1">3 次</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">及時解答科普與材料疑問</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-800 mb-1">
+              📈 個人空間 vs. 小組空間 知識翻新探究維度表現 (0-3分)
+            </h3>
+            <p class="text-[11px] text-slate-500 mb-2">
+              評估學生在「問題探索與提問」、「觀察與證據連結」、「想法深化度」三個維度的表現
+            </p>
+            <div class="relative h-56 w-full">
+              <canvas id="chart-cer-bars"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-800 mb-1">
+              🕸️ 學生提問與思考鷹架（KB Scaffolds）類別分佈
+            </h3>
+            <p class="text-[11px] text-slate-500 mb-2">
+              追蹤學生發起各類提問、科學常識、操作疑問或整合討論的比例（可用於 ENA 認知網絡分析）
+            </p>
+            <div class="relative h-56 w-full">
+              <canvas id="chart-scaffold-dist"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Individual & Group Student Roster Table -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-800">
+              🧑‍🎓 個人（座號）與小組（組別）雙層次學習狀態總覽表
+            </h3>
+            <span class="text-[11px] text-slate-500">點擊任一學生列可快速查看該生紀錄</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-200 text-slate-500 bg-slate-50">
+                  <th class="py-2 px-3">組別</th>
+                  <th class="py-2 px-3">座號</th>
+                  <th class="py-2 px-3">個人發言數</th>
+                  <th class="py-2 px-3">小組發言數</th>
+                  <th class="py-2 px-3">最新探究維度 (提問 / 證據 / 深化)</th>
+                  <th class="py-2 px-3">最新知識翻新行為與問題類型</th>
+                </tr>
+              </thead>
+              <tbody id="roster-table-body" class="divide-y divide-slate-200 text-slate-700">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TEACHER TAB 2: CREATE CLASSROOM & EDIT MATERIAL ================= -->
+      <div id="tview-classrooms" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- Left 5 Cols: Existing Classrooms List -->
+        <div class="lg:col-span-5 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-900">📚 已開設的探究教室清單</h3>
+            <span class="text-[11px] text-slate-500">點擊卡片可切換為當前課堂</span>
+          </div>
+          <div id="classroom-list-container" class="space-y-2.5">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Right 7 Cols: Create New Classroom / Custom Topic & Material Form -->
+        <div class="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+            <div>
+              <h3 class="font-bold text-sm sm:text-base text-indigo-950">➕ 開設新教室／自訂探究主題與教學引導原則</h3>
+              <p class="text-xs text-slate-500">
+                AI 探究夥伴會結合本頁教材與 Gemini 模型，在適時解惑的同時維持探究動能
+              </p>
+            </div>
+            <button id="btn-fill-sample-class" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+              ✨ 一鍵帶入範例新課程（自製保溫瓶）
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label for="new-cls-name" class="font-bold text-slate-700 block mb-1">教室名稱 / 班級代碼 *</label>
+              <input id="new-cls-name" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-600" placeholder="例如：八年二班 自然探究 (CLS-104)" />
+            </div>
+            <div>
+              <label for="new-cls-topic" class="font-bold text-slate-700 block mb-1">這堂課的探究主題 *</label>
+              <input id="new-cls-topic" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-600" placeholder="例如：自製保溫瓶：影響熱傳播快慢的因素" />
+            </div>
+          </div>
+
+          <div class="text-xs">
+            <label for="new-cls-material" class="font-bold text-slate-700 block mb-1">
+              本堂課教材、科學背景、實驗現象或數據 * <span class="font-normal text-slate-500">（學生端可隨時查閱，AI 也會據此回答基礎科普問題並進行啟發）</span>
+            </label>
+            <textarea id="new-cls-material" rows="4" class="w-full border border-slate-300 rounded-xl p-3 focus:outline-none focus:border-indigo-600 leading-relaxed" placeholder="請輸入本課的實驗材料背景、操作情境、數據，或是可以直接向學生公開的常識資訊..."></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label for="new-cls-concepts" class="font-bold text-emerald-800 block mb-1">
+                目標科學概念關鍵字（以逗號分隔，供後台評估「想法深化度」）
+              </label>
+              <input id="new-cls-concepts" type="text" class="w-full border border-emerald-300 bg-emerald-50/30 rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-600" placeholder="例如：傳導, 對流, 輻射, 空氣絕熱, 反射輻射熱" />
+            </div>
+            <div>
+              <label for="new-cls-misconceptions" class="font-bold text-rose-800 block mb-1">
+                常見迷思概念關鍵字（以逗號分隔，供 AI 自動識別並反詰挑戰）
+              </label>
+              <input id="new-cls-misconceptions" type="text" class="w-full border border-rose-300 bg-rose-50/30 rounded-xl px-3 py-2 focus:outline-none focus:border-rose-600" placeholder="例如：鋁箔會自己發熱, 棉布產生熱量, 冷氣跑進去" />
+            </div>
+          </div>
+
+          <div class="text-xs">
+            <label for="new-cls-prompt" class="font-bold text-indigo-900 block mb-1">
+              自訂給 AI 的教學指導叮嚀 (Optional System Guidance)
+            </label>
+            <input id="new-cls-prompt" type="text" class="w-full border border-indigo-200 bg-indigo-50/20 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-600" placeholder="例如：如果學生問材料日常用途可直接回答；若問保溫誰最好請引導看實驗數據。" />
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button id="btn-create-classroom" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl transition shadow-sm cursor-pointer">
+              🚀 建立新教室並立即啟用
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TEACHER TAB 3: LIVE CODING LOGS ================= -->
+      <div id="tview-logs" class="hidden bg-slate-950 text-slate-100 p-4 rounded-2xl border border-slate-800 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5 text-xs">
+          <span class="text-slate-400">
+            即時記錄每位學生（座號）與各組別的發言，並自動標註知識翻新（KB）行為與想法深化指標：
+          </span>
+          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+            Dual-Output LLM Stream
+          </span>
+        </div>
+        <div id="backend-log-stream" class="space-y-2.5 max-h-[520px] overflow-y-auto custom-scroll">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL 1: GEMINI API KEY SETUP MODAL ================= -->
+  <div id="api-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔑</span>
+          <h3 class="font-bold text-base text-slate-900">連線 Google Gemini 官方 API</h3>
+        </div>
+        <button id="btn-close-api-modal" class="text-slate-400 hover:text-slate-700 font-bold text-sm cursor-pointer">✕ 關閉</button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-700">
+        <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-xl space-y-1">
+          <div class="font-bold text-indigo-950">🛡️ 本地安全儲存保證</div>
+          <p class="text-slate-600 leading-relaxed">
+            您輸入的 API Key 只會儲存在當前瀏覽器的本地空間（localStorage），對話請求直接發送到 Google 官方 API 端點，絕不上傳到任何第三方伺服器。
+          </p>
+        </div>
+
+        <div>
+          <label for="input-api-key" class="font-bold text-slate-800 block mb-1">
+            Google AI Studio API Key *
+          </label>
+          <div class="relative">
+            <input id="input-api-key" type="password" class="w-full border border-slate-300 rounded-xl px-3 py-2 pr-20 text-xs font-mono focus:outline-none focus:border-indigo-600" placeholder="例如：AIzaSy..." />
+            <button id="btn-toggle-key-vis" class="absolute right-2 top-1.5 px-2 py-0.5 rounded text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold cursor-pointer">
+              顯示
+            </button>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+            <span>還沒有 API Key？可至 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-600 underline">Google AI Studio</a> 免費申請</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="select-gemini-model" class="font-bold text-slate-800 block">選擇模型版本</label>
+              <button id="btn-fetch-account-models" type="button" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer">
+                🔄 查詢我的帳號可用模型
+              </button>
+            </div>
+            <select id="select-gemini-model" class="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold bg-slate-50 focus:outline-none focus:border-indigo-600">
+              <option value="gemini-1.5-flash" selected>gemini-1.5-flash (標準穩定推薦)</option>
+              <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (自動最新版)</option>
+              <option value="gemini-2.0-flash">gemini-2.0-flash (次世代極速版)</option>
+              <option value="gemini-1.5-pro">gemini-1.5-pro (深度推理版)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (若帳號支援)</option>
+              <option value="custom">自訂模型名稱 (Custom Model ID)...</option>
+            </select>
+            <div id="custom-model-wrapper" class="hidden mt-2">
+              <input id="input-custom-model" type="text" class="w-full border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:border-indigo-600" placeholder="輸入自訂模型代碼，例如：gemini-1.5-flash-002" />
+            </div>
+          </div>
+          <div>
+            <label class="font-bold text-slate-800 block mb-1">連線診斷測試</label>
+            <button id="btn-test-api-connection" class="w-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-semibold py-2 rounded-xl text-xs transition cursor-pointer">
+              ⚡ 立即測試金鑰有效性
+            </button>
+          </div>
+        </div>
+
+        <div id="api-test-result" class="hidden p-2.5 rounded-xl text-xs font-medium"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+        <button id="btn-clear-api-key" class="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer">
+          🗑️ 清除金鑰（切回模擬引擎）
+        </button>
+        <div class="flex gap-2">
+          <button id="btn-save-api-key" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow-xs cursor-pointer">
+            💾 儲存並啟用連線
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 2: EXPORT RESEARCH DATA MODAL ================= -->
+  <div id="export-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl border border-slate-200 space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2.5">
+        <h3 class="font-bold text-base text-slate-900">📥 匯出研究數據（支援 CSV / JSON / TXT）</h3>
+        <button id="btn-close-export" class="text-slate-400 hover:text-slate-700 font-bold text-sm cursor-pointer">✕ 關閉</button>
+      </div>
+      <p class="text-xs text-slate-600">
+        包含教室代碼、組別、座號、個人/小組空間、學生原始提問、AI 回覆內容，以及自動質性編碼指標：
+      </p>
+      <pre id="export-content-pre" class="bg-slate-950 text-emerald-300 p-3 rounded-xl text-[11px] font-mono overflow-x-auto max-h-72 custom-scroll"></pre>
+      <div class="flex flex-wrap justify-between items-center gap-2 pt-2">
+        <span class="text-[11px] text-slate-400">可用於 SPSS、R 語言統計或 ENA 認知網絡分析</span>
+        <div class="flex gap-2">
+          <button id="btn-download-csv" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+            ⬇️ 下載 .CSV 檔案
+          </button>
+          <button id="btn-copy-csv" class="text-xs bg-slate-800 hover:bg-slate-700 text-white font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+            📊 複製 CSV
+          </button>
+          <button id="btn-copy-json" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+            📋 複製 JSON
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 1. CLASSROOMS & CURRICULUM DATABASE ====================
+    const CLASSROOMS = [
+      {
+        id: 'CLS-101',
+        name: '八年一班・理化探究 (CLS-101)',
+        topic: '不同溶液溶解保麗龍',
+        material: '【材料背景知識】\n保麗龍的學名叫聚苯乙烯（Polystyrene，縮寫 PS），在塑膠回收標誌中屬於「6 號塑膠」。常見有兩大分類：\n1. EPS（發泡聚苯乙烯）：常見白色顆粒狀，有高達 98% 都是微小的封閉空氣孔隙，僅 2% 是純塑膠，常用於生鮮箱與包裝防震材。\n2. XPS（擠出聚苯乙烯）：質地緊實均勻，常作為建築隔熱材料。\n【實驗現象與數據】\n1. 測試溶液：純水、75%酒精、沙拉油、去光水(丙酮)、檸檬皮精油。\n2. 去光水與檸檬皮精油能讓保麗龍在數秒內塌陷成透明黏稠膠狀物，並冒出大量氣泡。\n3. 關鍵實驗數據：電子秤測量溶解前後總重量完全相同（皆為 42.5g，質量守恆），且將透明膠狀物風乾後會硬化變回塑膠塊。\n【探究核心】氣泡從何而來？去光水和天然檸檬皮精油能溶解保麗龍，水和酒精卻不行，兩類液體有何特徵？',
+        concepts: ['有機溶劑', '相似相溶', '孔隙', '空氣', '氣孔', '物理變化', '物理溶解', '質量不變', '結構', '聚苯乙烯', '6號塑膠', 'EPS'],
+        misconceptions: ['化學反應', '腐蝕', '強酸', '產生新氣體', '有毒', '融化'],
+        promptGuidance: '若學生問保麗龍的分類、塑膠標誌、日常用途等事實性問題，請先清楚熱情地解答；接著再引導學生思考：「既然 EPS 裡面有 98% 是空氣孔隙，那溶解時冒出的泡泡有沒有可能就是這些空氣被釋放出來呢？」',
+        sampleMisconception: '❓ [好奇提問] 我想請問為什麼保麗龍放進去光水裡會一直冒泡泡？是不是去光水有強酸腐蝕性，跟它發生化學反應產生新氣體？',
+        sampleCircular: '🧪 [實驗與操作] 如果我們想確定那些泡泡是不是空氣，也不確定檸檬皮汁跟檸檬皮油差在哪，我們接下來可以怎麼設計實驗測試？',
+        sampleRiseAbove: '🚀 [超越整合] 把大家的發現跟討論整合起來，我們認為更合理的解釋是：去光水與檸檬皮精油同屬有機溶劑（相似相溶），能拆開保麗龍的高分子結構；而電子秤總重不變證明冒出的泡泡不是化學反應，只是原本包在保麗龍孔隙裡的空氣被釋放出來！'
+      },
+      {
+        id: 'CLS-102',
+        name: '七年三班・生物探究 (CLS-102)',
+        topic: '影響酵素活性的因素（雙氧水與豬肝／蘿蔔）',
+        material: '【材料背景知識】\n酵素（酶）的主要成分是蛋白質，具有生物催化功能，能加速體內化學反應（如過氧化氫酶將雙氧水分解為水與氧氣）。酵素並不是活的細菌，因此不會「被殺死」，但蛋白質高溫受熱會產生結構變性（失活）。\n【實驗現象與數據】\n1. 將新鮮豬肝或蘿蔔分別置於「冰水(0°C)、常溫(37°C)、沸水煮沸(100°C)」處理後，加入雙氧水。\n2. 常溫組冒泡最劇烈；冰水組冒泡緩慢，但移至室溫回溫後恢復劇烈冒泡；煮沸組完全不冒泡，冷卻後重新加入雙氧水依然完全不冒泡。\n【探究核心】為什麼冰水組回溫可恢復活性，但高溫煮沸組冷卻後卻永久無法恢復？',
+        concepts: ['蛋白質', '活性', '結構破壞', '失活', '不可逆', '低溫抑制', '催化', '氧氣', '過氧化氫酶'],
+        misconceptions: ['酵素死掉', '酵素是細菌', '煮沸把酵素蒸發', '雙氧水壞掉'],
+        promptGuidance: '若學生詢問酵素是什麼或雙氧水原理，先直接科普蛋白質與催化功能；再引導思考高溫變性（如煎蛋蛋白不可逆凝固）與低溫暫時抑制的微觀分子差異。',
+        sampleMisconception: '❓ [好奇提問] 為什麼煮沸後的蘿蔔加雙氧水都不會冒泡？是因為裡面的酵素細菌被100度熱水燙死了嗎？',
+        sampleCircular: '🧪 [實驗與操作] 我們如果把冰水那一管拿出來放回溫水，跟煮沸那一管放涼再測一次，操作上要注意控制哪些條件一樣？',
+        sampleRiseAbove: '🚀 [超越整合] 把大家的發現跟討論整合起來，我們認為更合理的解釋是：酵素本身是蛋白質（不是活的細菌），高溫煮沸會永久破壞蛋白質的立體結構（不可逆失活），因此冷卻後也無法催化雙氧水；而低溫只是暫時降低反應速率，結構沒壞所以回溫後能恢復活性！'
+      },
+      {
+        id: 'CLS-103',
+        name: '八年五班・物理探究 (CLS-103)',
+        topic: '影響單擺擺動週期的因素',
+        material: '【背景知識與操作要點】\n單擺的擺長定義是「懸掛固定點到擺錘重心的距離」，而非只有細線長度。單擺週期是指擺錘來回擺動一次所需要的時間。\n【實驗現象與數據】\n1. 測試三變因：擺錘質量（10g vs 50g）、擺角（5度 vs 15度）、擺長（25cm vs 100cm）。\n2. 數據顯示：固定擺角與擺長時，換用50g重擺錘，擺動10次時間皆精準為 10.0 秒；但擺長由 25cm 增為 100cm 時，時間由 10.0 秒倍增至 20.0 秒。\n【探究核心】為什麼較重的擺錘受到較大地球引力，擺動卻沒有比較快？',
+        concepts: ['擺長', '控制變因', '操縱變因', '重力加速度', '週期', '質量無關', '慣性', '重心'],
+        misconceptions: ['越重越快', '重力比較大所以比較快', '空氣阻力決定週期'],
+        promptGuidance: '若學生詢問擺長怎麼量或單擺器材使用，直接清晰告知操作要點；若問為什麼重物沒有比較快，引導學生思考重力越大但物體的質量（抗拒加速的慣性）也同比例變大。',
+        sampleMisconception: '💡 [我的想法] 關於這個問題，我目前的猜測是：50公克的擺錘比10公克重很多，受到地球引力比較大，應該會擺動得比較快吧？為什麼實驗出來時間一樣？',
+        sampleCircular: '🧪 [實驗與操作] 我們在計時擺動10次的時候，繩子要從哪裡量到哪裡才算真正的「擺長」？放手的角度不一樣會不會影響結果？',
+        sampleRiseAbove: '🚀 [超越整合] 把大家的發現跟討論整合起來，我們認為更合理的解釋是：在控制擺角不變下，單擺週期只取決於「擺長」而與「擺錘質量」無關；因為質量越大雖然受重力越大，但慣性也同比例變大，兩者抵銷後加速度相同，唯有擺長變長會增加擺動路徑與週期！'
+      }
+    ];
+
+    // ==================== 2. APPLICATION STATE ====================
+    let activeClassroomId = 'CLS-101';
+    let currentGroup = '第 3 組';
+    let currentSeat = '12';
+    let currentChatSpace = 'personal'; // 'personal' | 'group'
+    let currentLayoutMode = 'student'; // 'student' | 'teacher' | 'split'
+
+    // Gemini API Configuration
+    let geminiConfig = {
+      apiKey: localStorage.getItem('gemini_kb_api_key') || '',
+      model: localStorage.getItem('gemini_kb_model') || 'gemini-1.5-flash'
+    };
+
+    // Chat history storage
+    const chatHistories = {
+      'CLS-101_personal_第 3 組_12': [
+        {
+          sender: 'agent',
+          name: '🤖 AI 探究夥伴',
+          time: '17:50',
+          text: '嗨！第 3 組 12 號同學，歡迎來到「不同溶液溶解保麗龍」的個人探究空間。這裡不預設任何回答格式，不論你想問保麗龍的材料背景、實驗怎麼操作，或想分享觀察與猜測，都可以隨時跟我聊聊！'
+        }
+      ],
+      'CLS-101_group_第 3 組': [
+        {
+          sender: 'agent',
+          name: '🤖 小組 KB 促動 AI',
+          time: '17:52',
+          text: '歡迎【第 3 組】同學來到小組共構空間！不同座號的組員可以在這裡自由提問、分享各自的發現，並使用「🚀 綜合大家的想法 (Rise Above)」一起拼湊出更完整的解釋。'
+        }
+      ]
+    };
+
+    // Auto-coding log stream
+    let codingLogs = [
+      {
+        id: 'LOG-102',
+        classroomId: 'CLS-101',
+        timestamp: '17:54:12',
+        space: 'group',
+        group: '第 3 組',
+        seat: '08',
+        scaffold: '🔍 [分享觀察]',
+        rawText: '我剛剛發現溶解前後電子秤都是 42.5g，而且透明膠塊風乾後還是硬塑膠，代表根本沒有變成新物質，泡泡應該只是保麗龍孔隙裡的空氣跑出來！',
+        kbMove: 'Evidence_Based_Reasoning (證據支持推論)',
+        scores: { c: 2, e: 3, r: 2 },
+        flag: '✅ 澄清氣泡來源（孔隙空氣）'
+      },
+      {
+        id: 'LOG-101',
+        classroomId: 'CLS-101',
+        timestamp: '17:51:04',
+        space: 'personal',
+        group: '第 3 組',
+        seat: '12',
+        scaffold: '❓ [好奇提問]',
+        rawText: '我想請問為什麼保麗龍放進去光水裡會一直冒泡泡？是不是去光水有強酸腐蝕性，跟它發生化學反應產生新氣體？',
+        kbMove: 'Authentic_Questioning (真實好奇提問)',
+        scores: { c: 3, e: 2, r: 1 },
+        flag: '⚠️ 提出常見直覺迷思：化學反應、酸蝕'
+      },
+      {
+        id: 'LOG-100',
+        classroomId: 'CLS-101',
+        timestamp: '17:48:30',
+        space: 'personal',
+        group: '第 1 組',
+        seat: '03',
+        scaffold: '🚀 [超越整合]',
+        rawText: '綜合實驗數據，去光水與檸檬皮精油同屬有機溶劑（相似相溶），能拆開保麗龍結構並釋放內部孔隙的空氣，因此總質量不變，屬於物理溶解。',
+        kbMove: 'Rise_Above_Synthesis (知識翻新超越整合)',
+        scores: { c: 3, e: 3, r: 3 },
+        flag: '🌟 達成高階知識翻新整合 (Rise Above)'
+      }
+    ];
+
+    let cerBarChart = null;
+    let scaffoldPieChart = null;
+
+    // ==================== 3. HELPERS & FORMATTERS ====================
+    function showToast(msg, icon = '✨') {
+      const banner = document.getElementById('toast-banner');
+      document.getElementById('toast-icon').textContent = icon;
+      document.getElementById('toast-text').textContent = msg;
+      banner.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => banner.classList.add('hidden'), 3200);
+    }
+
+    function getActiveClassroom() {
+      return CLASSROOMS.find(c => c.id === activeClassroomId) || CLASSROOMS[0];
+    }
+
+    // Lightweight Markdown to HTML Renderer for natural LLM formatting
+    function renderMarkdown(str) {
+      if (!str) return '';
+      let html = str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      // Bold: **text**
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Numbered Lists: 1. text
+      html = html.replace(/^(\d+)\.\s+(.*)$/gm, '<li class="ml-4 list-decimal">$2</li>');
+      // Bullet Lists: * text or - text
+      html = html.replace(/^[\*\-]\s+(.*)$/gm, '<li class="ml-4 list-disc">$1</li>');
+      // Line Breaks
+      html = html.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+      return html;
+    }
+
+    // Update API Key Status Indicator in Header & Student View
+    function updateApiStatusBadge() {
+      const dot = document.getElementById('api-status-dot');
+      const text = document.getElementById('api-status-text');
+      const studentTag = document.getElementById('student-llm-tag');
+
+      if (geminiConfig.apiKey && geminiConfig.apiKey.trim().length > 10) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        text.textContent = `Gemini: 已連線 (${geminiConfig.model})`;
+        text.className = 'text-emerald-700 font-bold';
+        studentTag.textContent = `✨ Gemini 官方模型連線中 (${geminiConfig.model})`;
+        studentTag.className = 'text-[11px] px-2 py-0.5 rounded-full font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+        text.textContent = 'Gemini: 模擬引擎';
+        text.className = 'text-slate-700';
+        studentTag.textContent = '⚡ 內建知識模擬引擎（點上方設定 Key）';
+        studentTag.className = 'text-[11px] px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-800 border border-amber-200';
+      }
+    }
+
+    // ==================== 4. GEMINI API & DUAL-OUTPUT PROMPT ENGINE ====================
+    async function executeSingleGeminiCall(modelName, apiKey, contents, systemPrompt) {
+      const cleanModel = modelName.replace(/^models\//, '');
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
+
+      const requestBody = {
+        contents: contents,
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048
+        }
+      };
+
+      const controller = new AbortController();
+      let didTimeout = false;
+      const timeoutId = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, 35000);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `HTTP ${response.status} ${response.statusText}`;
+          const err = new Error(errMsg);
+          err.status = response.status;
+          throw err;
+        }
+
+        const data = await response.json();
+        const output = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!output || !output.trim()) {
+          throw new Error('Gemini API 回傳空內容（可能受到安全過濾器攔截）');
+        }
+
+        return { text: output.trim(), usedModel: cleanModel };
+      } catch (e) {
+        if (didTimeout || e.name === 'AbortError' || e.message.includes('aborted')) {
+          throw new Error('Gemini 伺服器請求逾時（超過 35 秒）');
+        }
+        throw e;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    async function callGeminiApi(userMessage, scaffold, cls, space, group, seat, history) {
+      const apiKey = geminiConfig.apiKey.trim();
+      let chosenModel = geminiConfig.model || 'gemini-1.5-flash';
+      if (chosenModel === 'custom') {
+        chosenModel = document.getElementById('input-custom-model')?.value.trim() || 'gemini-1.5-flash';
+      }
+
+      // Build model candidate sequence with automatic fallback
+      const candidateModels = [
+        chosenModel,
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-002',
+        'gemini-1.5-pro'
+      ];
+      const uniqueModels = Array.from(new Set(candidateModels.map(m => m.replace(/^models\//, ''))));
+
+      const systemPrompt = `你就是 Google Gemini，一位聰明、博學、親切且熱愛科學的探究導師。
+當前課堂主題是【${cls.name} - ${cls.topic}】。
+教材參考背景：${cls.material}
+發言學生：${group} ${seat} 號同學。
+
+請像一般的 Gemini 一樣，針對學生的具體問題進行自然、流暢、詳盡且專業的科學解答：
+1. 學生問什麼就回答什麼，第一時間直接給出清楚、正確、容易理解的科學答案與原理解釋，滿足學生的好奇心。
+2. 保持回答的多樣性與生動性，針對問題具體解答，嚴禁套用固定八股模板。
+3. 適當使用 Markdown 格式（粗體、條列點），讓排版美觀易讀。使用繁體中文。`;
+
+      const rawHistory = (history || []).slice(0, -1);
+      const contents = [];
+      let lastRole = null;
+
+      for (const m of rawHistory.slice(-8)) {
+        const role = m.sender === 'student' ? 'user' : 'model';
+        if (contents.length === 0 && role === 'model') continue;
+        if (role !== lastRole) {
+          contents.push({ role, parts: [{ text: m.text }] });
+          lastRole = role;
+        }
+      }
+
+      const promptText = scaffold ? `[思考角度: ${scaffold}]\n${userMessage}` : userMessage;
+      if (lastRole === 'user') {
+        contents[contents.length - 1].parts[0].text += `\n${promptText}`;
+      } else {
+        contents.push({ role: 'user', parts: [{ text: promptText }] });
+      }
+
+      let lastError = null;
+      for (const m of uniqueModels) {
+        try {
+          const result = await executeSingleGeminiCall(m, apiKey, contents, systemPrompt);
+          return {
+            reply: result.text,
+            isRealGemini: true,
+            usedModel: result.usedModel,
+            research_coding: {
+              kb_move: 'Real_Gemini_Generation',
+              scores: { c: 3, e: 3, r: 3 },
+              flag: `✨ Google Gemini (${result.usedModel}) 官方原生即時生成`,
+              question_type: '開放自然提問'
+            }
+          };
+        } catch (err) {
+          lastError = err;
+          console.warn(`嘗試模型 ${m} 失敗:`, err.message);
+          if (err.status === 400 || err.status === 403 || err.message.includes('API_KEY_INVALID') || err.message.includes('key not valid')) {
+            throw new Error(`Google API Key 無效或未開通權限: ${err.message}`);
+          }
+        }
+      }
+
+      throw lastError || new Error('所有 Gemini 官方模型皆連線失敗');
+    }
+
+    // ==================== 5. INTELLIGENT FALLBACK SIMULATION ENGINE ====================
+    function evaluateWithUpgradedFallback(text, scaffold, cls, space, group, seat) {
+      const q = text.trim();
+
+      if (/是什麼|是甚麼|定義|身分|介紹一下/.test(q) && /保麗龍/.test(q)) {
+        return {
+          reply: `**保麗龍（Styrofoam）**在科學上的正式名稱是「**發泡聚苯乙烯（Expanded Polystyrene，縮寫為 EPS）**」，是一種常見的熱塑性塑膠，在塑膠回收標誌中被歸類為 **6 號塑膠**。
+
+它的最大特點是「**98% 是空氣，只有 2% 是純塑膠**」！在製造過程中，聚苯乙烯顆粒被發泡劑膨脹成無數微小的封閉式氣囊，因此重量極輕、能浮於水面，並且具有非常優異的隔熱保溫與防震防摔效果。常見用於生鮮保溫冰盒、電器包裝防震墊與傳統免洗餐盒。`,
+          research_coding: { kb_move: 'Factual_Definition', scores: { c: 3, e: 3, r: 2 }, flag: '解答保麗龍基本定義與成分' }
+        };
+      }
+
+      if (/預熱|遇熱|加熱|溫度|受熱|熱水|微波|烤|熱油/.test(q)) {
+        return {
+          reply: `保麗龍遇到熱的反應非常劇烈，主要分為兩個階段：
+
+1. **軟化與劇烈塌陷（約 70°C ～ 100°C）**：
+   保麗龍屬於熱塑性塑膠，耐熱溫度只有約 70～90°C。一旦接觸到熱水或熱油，塑膠分子鏈會立刻軟化，內部原本膨脹封閉的高壓空氣會迅速逸散，導致**整塊保麗龍瞬間縮小、變形塌陷成扁平硬塊**！
+2. **高溫熔化與分解（約 100°C 以上）**：
+   超過熔點後會熔化為黏稠膠狀液體；若接觸明火燃燒，則會冒出濃烈刺鼻的黑煙，並釋放出具毒性的苯乙烯單體與一氧化碳。
+
+因此日常生活中絕對不能拿保麗龍碗進微波爐，也不能盛裝剛起鍋的滾燙熱湯或熱油喔！`,
+          research_coding: { kb_move: 'Thermal_Property', scores: { c: 3, e: 3, r: 3 }, flag: '解答遇熱軟化收縮與熔化' }
+        };
+      }
+
+      if (/取代|替代|代替|環保|不要用保麗龍|不用保麗龍|包材/.test(q)) {
+        return {
+          reply: `目前科學界與產業界已經研發出多種可以完全取代保麗龍的環保材料：
+
+1. **玉米澱粉發泡包裝粒**：外觀跟保麗龍防震顆粒一模一樣，但由天然澱粉製成，**遇水就能直接溶解**，可在土壤中自然完全生物分解！
+2. **蘑菇菌絲體（Mycelium）包材**：利用真菌菌絲吃木屑稻殼生長成型，質輕耐震且隔熱極佳，丟棄後數週內就能自然堆肥化。
+3. **蜂巢紙與瓦楞紙緩衝材**：利用六角形幾何結構吸收撞擊力，100% 可回收重製。
+4. **甘蔗渣／竹纖維紙漿餐具**：天然植物纖維壓製，耐高溫且耐油，用以取代傳統保麗龍便當盒。`,
+          research_coding: { kb_move: 'Material_Substitution', scores: { c: 3, e: 3, r: 3 }, flag: '解答環保替代材料' }
+        };
+      }
+
+      if (/為什麼.*溶解|去光水.*溶|丙酮.*溶|怎麼溶|原理|相似相溶/.test(q)) {
+        return {
+          reply: `保麗龍會被去光水（丙酮）溶解，是因為化學上的「**相似相溶原理（Like dissolves like）**」：
+
+保麗龍（聚苯乙烯）是非極性的高分子長鏈，而去光水中的丙酮是一種有機溶劑。丙酮的小分子能快速滲透進聚苯乙烯長鏈之間，**拆散長鏈之間的凡得瓦力（分子間吸引力）**，使原本緊密糾纏的高分子鏈鬆開並均勻分散在溶劑中，變成透明黏稠的膠液。
+
+這是一個純粹的**物理溶解過程**，並沒有產生新物質，等溶劑揮發乾掉後，聚苯乙烯分子又會重新凝固變回原本的硬塑膠塊！`,
+          research_coding: { kb_move: 'Dissolution_Mechanism', scores: { c: 3, e: 3, r: 3 }, flag: '解答相似相溶溶解原理' }
+        };
+      }
+
+      if (/泡泡|氣泡|冒泡|氣體/.test(q)) {
+        return {
+          reply: `溶解時冒出的那些泡泡，**不是化學反應產生的新氣體，純粹是保麗龍孔隙裡原本包住的「空氣」被釋放出來**！
+
+因為保麗龍整塊體積中有 98% 都是封閉在微小氣孔裡的空氣。當去光水迅速融穿薄薄的塑膠壁時，被困在裡面的空氣瞬間大量衝出液面，看起來就像劇烈沸騰冒泡一樣！實驗前後電子秤總重量（42.5g）完全維持不變，也印證了並沒有產生新的化學氣體。`,
+          research_coding: { kb_move: 'Air_Pore_Release', scores: { c: 3, e: 3, r: 3 }, flag: '解答氣泡本質為封閉空氣' }
+        };
+      }
+
+      if (/分類|種類|幾號|EPS|XPS/.test(q)) {
+        return {
+          reply: `保麗龍在塑膠分類中是 **6 號塑膠（PS，聚苯乙烯）**，主要分為兩大類：
+1. **EPS（發泡聚苯乙烯）**：最常見的白色顆粒狀，含 98% 空氣，常做生鮮保溫箱、防震包裝與免洗碗。
+2. **XPS（擠出發泡聚苯乙烯）**：質地更密實均勻，吸水率極低，常做成建築隔熱板與模型雕刻板。`,
+          research_coding: { kb_move: 'Category_Explanation', scores: { c: 3, e: 2, r: 2 }, flag: '解答材料分類' }
+        };
+      }
+
+      if (/毒|有毒|危險|安全|能吃嗎|吃了會/.test(q)) {
+        return {
+          reply: `常溫下的保麗龍是穩定的固態聚合物，本身毒性極低（但絕對不能食用，會造成腸胃道阻塞！）。
+
+**真正的危險在於高溫與油脂接觸**：
+當保麗龍接觸到高溫（超過 70~90°C）或熱油時，結構會開始分解，可能釋放出微量的「苯乙烯單體」，長期過量接觸具有致癌風險。因此環保署已全面禁用保麗龍免洗餐具，建議使用不銹鋼、玻璃或陶瓷容器！`,
+          research_coding: { kb_move: 'Safety_Toxicity', scores: { c: 3, e: 3, r: 2 }, flag: '解答安全性與毒性疑慮' }
+        };
+      }
+
+      return {
+        reply: `針對你的提問「**${q}**」：
+
+在科學探究中，這是個很有意思的切入點！以當前主題【${cls.topic}】來說，聚苯乙烯（PS）作為一種高分子材料，其物理與化學表現（如受熱、受力、接觸不同溶劑）都由它的分子結構所決定。
+
+如果你想更深入探索，可以試著從「**微觀分子特性**」或是「**實驗對照結果**」來思考，有任何延伸的好奇或想問的細節，都可以隨時告訴我！`,
+        research_coding: { kb_move: 'Dynamic_Inquiry_Answer', scores: { c: 2, e: 2, r: 2 }, flag: `動態回答提問：${q.slice(0, 20)}` }
+      };
+    }
+
+    // ==================== 6. UNIFIED SEND MESSAGE PIPELINE ====================
+    async function sendStudentMessage(overrideText = null, overrideScaffold = null) {
+      const inputEl = document.getElementById('student-chat-input');
+      const sendBtn = document.getElementById('btn-student-send');
+      const rawText = (overrideText !== null ? overrideText : inputEl.value).trim();
+      if (!rawText) return;
+
+      currentGroup = document.getElementById('student-group-input').value;
+      currentSeat = document.getElementById('student-seat-input').value.trim() || '12';
+
+      const cls = getActiveClassroom();
+      const scaffold = overrideScaffold || window._activeScaffoldChip || '';
+      window._activeScaffoldChip = '';
+
+      const historyKey = currentChatSpace === 'personal'
+        ? `${activeClassroomId}_personal_${currentGroup}_${currentSeat}`
+        : `${activeClassroomId}_group_${currentGroup}`;
+
+      if (!chatHistories[historyKey]) chatHistories[historyKey] = [];
+
+      const nowTime = new Date().toTimeString().slice(0, 5);
+
+      chatHistories[historyKey].push({
+        sender: 'student',
+        group: currentGroup,
+        seat: currentSeat,
+        time: nowTime,
+        scaffold,
+        text: rawText
+      });
+
+      inputEl.value = '';
+      renderStudentInterface();
+
+      const thinkingIndicator = document.getElementById('thinking-indicator');
+      const thinkingText = document.getElementById('thinking-text');
+      thinkingIndicator.classList.remove('hidden');
+      sendBtn.disabled = true;
+      sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      let evalResult = null;
+      const isGeminiConnected = geminiConfig.apiKey && geminiConfig.apiKey.trim().length > 10;
+
+      try {
+        if (isGeminiConnected) {
+          thinkingText.textContent = `✨ Google Gemini 正在即時生成回答...`;
+          try {
+            evalResult = await callGeminiApi(
+              rawText,
+              scaffold,
+              cls,
+              currentChatSpace,
+              currentGroup,
+              currentSeat,
+              chatHistories[historyKey]
+            );
+          } catch (err) {
+            console.error('Gemini API Error:', err);
+            evalResult = {
+              reply: `⚠️ **Gemini 官方 API 連線發生異常**：\n\n\`${err.message}\`\n\n💡 **可能原因與解決方式**：\n1. 請點擊右上角「**🔑 設定金鑰**」，點選「**🔄 查詢我的帳號可用模型**」自動選定版本。\n2. 請確認您在 [Google AI Studio](https://aistudio.google.com/app/apikey) 產生的 API Key 是否正確。\n\n--- \n*(以下為本地科學知識引擎備援回覆)*：\n\n${evaluateWithUpgradedFallback(rawText, scaffold, cls, currentChatSpace, currentGroup, currentSeat).reply}`,
+              research_coding: {
+                kb_move: 'API_Error_Reported',
+                scores: { c: 2, e: 2, r: 1 },
+                flag: `Gemini API 異常: ${err.message.slice(0, 40)}`
+              }
+            };
+            showToast(`Gemini API 發生錯誤：${err.message}`, '⚠️');
+          }
+        } else {
+          thinkingText.textContent = '智慧探究夥伴正在思考回答...';
+          await new Promise(r => setTimeout(r, 200));
+          evalResult = evaluateWithUpgradedFallback(rawText, scaffold, cls, currentChatSpace, currentGroup, currentSeat);
+        }
+      } catch (fatalErr) {
+        console.error('Fatal send error caught:', fatalErr);
+        evalResult = evaluateWithUpgradedFallback(rawText, scaffold, cls, currentChatSpace, currentGroup, currentSeat);
+      } finally {
+        thinkingIndicator.classList.add('hidden');
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      chatHistories[historyKey].push({
+        sender: 'agent',
+        name: currentChatSpace === 'group' ? '🤖 小組 KB 促動 AI' : '🤖 AI 探究夥伴',
+        time: new Date().toTimeString().slice(0, 5),
+        text: evalResult.reply,
+        usedModel: evalResult.usedModel || null
+      });
+
+      const coding = evalResult.research_coding || {
+        kb_move: 'Open_Dialogue',
+        scores: { c: 2, e: 2, r: 2 },
+        flag: '探究對話記錄'
+      };
+
+      const newLogId = 'LOG-' + (101 + codingLogs.length);
+      codingLogs.unshift({
+        id: newLogId,
+        classroomId: activeClassroomId,
+        timestamp: new Date().toTimeString().slice(0, 8),
+        space: currentChatSpace,
+        group: currentGroup,
+        seat: currentSeat,
+        scaffold: scaffold || '自由發言',
+        rawText,
+        aiReply: evalResult.reply,
+        kbMove: coding.kb_move || 'Open_Dialogue',
+        scores: coding.scores || { c: 2, e: 2, r: 2 },
+        flag: coding.flag || '探究交流',
+        isRealLLM: !!evalResult.isRealGemini
+      });
+
+      renderStudentInterface();
+      renderTeacherBackend(true);
+    }
+
+    // ==================== 7. RENDER STUDENT VIEW ====================
+    function renderStudentInterface() {
+      const cls = getActiveClassroom();
+
+      const stuSelect = document.getElementById('student-classroom-select');
+      const filterSelect = document.getElementById('filter-classroom');
+      stuSelect.innerHTML = '';
+      filterSelect.innerHTML = '';
+
+      CLASSROOMS.forEach(c => {
+        const opt1 = document.createElement('option');
+        opt1.value = c.id;
+        opt1.textContent = `${c.topic} (${c.name})`;
+        if (c.id === activeClassroomId) opt1.selected = true;
+        stuSelect.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = c.id;
+        opt2.textContent = `${c.topic} (${c.id})`;
+        if (c.id === activeClassroomId) opt2.selected = true;
+        filterSelect.appendChild(opt2);
+      });
+
+      document.getElementById('header-classroom-badge').textContent = `目前教室：${cls.topic}`;
+      document.getElementById('student-topic-title').textContent = `探究主題：${cls.topic}`;
+      document.getElementById('student-material-content').textContent = cls.material;
+      document.getElementById('student-identity-pill').textContent = `👤 ${currentGroup}・${currentSeat} 號同學`;
+      document.getElementById('group-tab-label').textContent = currentGroup;
+
+      updateApiStatusBadge();
+
+      const btnPersonal = document.getElementById('chat-space-personal');
+      const btnGroup = document.getElementById('chat-space-group');
+      const spaceIndicator = document.getElementById('space-mode-indicator');
+
+      if (currentChatSpace === 'personal') {
+        btnPersonal.className = 'px-3 py-1.5 rounded-lg font-bold transition bg-white text-indigo-700 shadow-xs cursor-pointer';
+        btnGroup.className = 'px-3 py-1.5 rounded-lg font-bold transition text-slate-600 hover:text-slate-900 cursor-pointer';
+        spaceIndicator.textContent = `目前空間：👤 個人與 AI 對話（${currentGroup} ${currentSeat}號）`;
+        spaceIndicator.className = 'text-indigo-600 font-semibold';
+      } else {
+        btnGroup.className = 'px-3 py-1.5 rounded-lg font-bold transition bg-white text-emerald-700 shadow-xs cursor-pointer';
+        btnPersonal.className = 'px-3 py-1.5 rounded-lg font-bold transition text-slate-600 hover:text-slate-900 cursor-pointer';
+        spaceIndicator.textContent = `目前空間：👥 ${currentGroup} 小組共構討論室（目前以 ${currentSeat}號 身分發言）`;
+        spaceIndicator.className = 'text-emerald-700 font-semibold';
+      }
+
+      const historyKey = currentChatSpace === 'personal'
+        ? `${activeClassroomId}_personal_${currentGroup}_${currentSeat}`
+        : `${activeClassroomId}_group_${currentGroup}`;
+
+      if (!chatHistories[historyKey]) {
+        if (currentChatSpace === 'personal') {
+          chatHistories[historyKey] = [
+            {
+              sender: 'agent',
+              name: '🤖 AI 探究夥伴',
+              time: new Date().toTimeString().slice(0, 5),
+              text: `嗨！${currentGroup} ${currentSeat} 號同學，歡迎進入「${cls.topic}」的個人探究空間。這裡沒有標準答案或固定格式，不論你想問實驗步驟、好奇某個現象為什麼發生，或想詢問科學背景（如材料分類），都可以隨時跟我聊聊！`
+            }
+          ];
+        } else {
+          chatHistories[historyKey] = [
+            {
+              sender: 'agent',
+              name: '🤖 小組 KB 促動 AI',
+              time: new Date().toTimeString().slice(0, 5),
+              text: `歡迎【${currentGroup}】進入「${cls.topic}」的小組共構空間！不同座號的組員可以在這裡自由提問、分享各自的發現，並使用「🚀 綜合大家的想法 (Rise Above)」一起拼湊出更完整的解釋。`
+            }
+          ];
+        }
+      }
+
+      const stream = document.getElementById('student-chat-stream');
+      stream.innerHTML = '';
+      chatHistories[historyKey].forEach(msg => {
+        const row = document.createElement('div');
+        if (msg.sender === 'agent') {
+          const isGroupAgent = currentChatSpace === 'group';
+          row.className = 'flex items-start gap-2.5';
+          const modelBadge = msg.usedModel ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">✨ Gemini (${msg.usedModel}) 官方生成</span>` : '';
+          row.innerHTML = `
+            <div class="w-8 h-8 rounded-xl ${isGroupAgent ? 'bg-emerald-600' : 'bg-indigo-600'} text-white flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-xs">🤖</div>
+            <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-3.5 text-xs sm:text-sm text-slate-800 shadow-xs max-w-[88%] space-y-1 leading-relaxed">
+              <div class="flex items-center justify-between gap-2 text-xs font-bold ${isGroupAgent ? 'text-emerald-700' : 'text-indigo-600'}">
+                <div class="flex items-center gap-1.5">
+                  <span>${msg.name}</span>
+                  ${modelBadge}
+                </div>
+                <span class="text-slate-400 font-normal text-[11px]">${msg.time}</span>
+              </div>
+              <div class="prose prose-sm max-w-none text-slate-800">${renderMarkdown(msg.text)}</div>
+            </div>
+          `;
+        } else {
+          const isMe = String(msg.seat) === String(currentSeat);
+          row.className = `flex items-start ${isMe ? 'justify-end' : 'justify-start'} gap-2.5`;
+          const bubbleStyle = isMe
+            ? 'bg-indigo-600 text-white rounded-2xl rounded-tr-xs'
+            : 'bg-white border border-slate-300 text-slate-800 rounded-2xl rounded-tl-xs';
+          const metaStyle = isMe ? 'text-indigo-200' : 'text-slate-500';
+          const scafStyle = isMe ? 'bg-indigo-500 text-white' : 'bg-amber-100 text-amber-900';
+          row.innerHTML = `
+            <div class="${bubbleStyle} p-3.5 text-xs sm:text-sm shadow-xs max-w-[85%] space-y-1">
+              <div class="flex items-center justify-between gap-3 text-[11px] ${metaStyle} font-semibold">
+                <span>${msg.group}・${msg.seat} 號同學</span>
+                <span>${msg.time}</span>
+              </div>
+              ${msg.scaffold ? `<span class="inline-block text-[11px] px-2 py-0.5 rounded-full ${scafStyle} font-semibold">${msg.scaffold}</span>` : ''}
+              <div class="leading-relaxed whitespace-pre-line">${msg.text}</div>
+            </div>
+          `;
+        }
+        stream.appendChild(row);
+      });
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    // ==================== 8. RENDER TEACHER BACKEND ====================
+    function renderTeacherBackend(flashNewest = false) {
+      const filterCls = document.getElementById('filter-classroom').value || activeClassroomId;
+      const filterGrp = document.getElementById('filter-group').value || 'ALL';
+      const filterSeatVal = document.getElementById('filter-seat').value || 'ALL';
+
+      const classLogs = codingLogs.filter(l => l.classroomId === filterCls);
+      const uniqueSeats = Array.from(new Set(classLogs.map(l => l.seat))).sort((a, b) => Number(a) - Number(b));
+      const seatSelect = document.getElementById('filter-seat');
+      const prevSeat = seatSelect.value;
+      seatSelect.innerHTML = '<option value="ALL">全部座號（個人＋小組）</option>';
+      uniqueSeats.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = `${s} 號同學`;
+        if (s === prevSeat) opt.selected = true;
+        seatSelect.appendChild(opt);
+      });
+
+      const filteredLogs = classLogs.filter(l => {
+        if (filterGrp !== 'ALL' && l.group !== filterGrp) return false;
+        if (filterSeatVal !== 'ALL' && String(l.seat) !== String(filterSeatVal)) return false;
+        return true;
+      });
+
+      document.getElementById('kpi-count').textContent = `${filteredLogs.length} 筆`;
+      const avgR = filteredLogs.length
+        ? (filteredLogs.reduce((acc, l) => acc + (l.scores?.r || 1), 0) / filteredLogs.length).toFixed(1)
+        : '0.0';
+      document.getElementById('kpi-avg-r').textContent = `${avgR} / 3.0`;
+
+      const riseCount = filteredLogs.filter(l => (l.kbMove && l.kbMove.includes('Rise_Above')) || (l.scaffold && l.scaffold.includes('超越'))).length;
+      document.getElementById('kpi-rise-above').textContent = `${riseCount} 次`;
+
+      const factCount = filteredLogs.filter(l => (l.flag && l.flag.includes('分類')) || (l.scaffold && l.scaffold.includes('科學知識')) || (l.kbMove && l.kbMove.includes('Factual'))).length;
+      document.getElementById('kpi-misconceptions').textContent = `${factCount} 次`;
+
+      const studentMap = {};
+      classLogs.forEach(l => {
+        if (filterGrp !== 'ALL' && l.group !== filterGrp) return;
+        const key = `${l.group}_${l.seat}`;
+        if (!studentMap[key]) {
+          studentMap[key] = {
+            group: l.group,
+            seat: l.seat,
+            personalCount: 0,
+            groupCount: 0,
+            latestScores: l.scores || { c: 2, e: 2, r: 1 },
+            latestFlag: l.flag || '一般探究'
+          };
+        }
+        if (l.space === 'personal') studentMap[key].personalCount += 1;
+        else studentMap[key].groupCount += 1;
+      });
+
+      const rosterBody = document.getElementById('roster-table-body');
+      rosterBody.innerHTML = '';
+      const rosterList = Object.values(studentMap);
+      if (rosterList.length === 0) {
+        rosterBody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-400">目前篩選條件下尚無學生對話紀錄，請在學生端發送訊息測試！</td></tr>`;
+      } else {
+        rosterList.forEach(st => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 transition cursor-pointer';
+          tr.addEventListener('click', () => {
+            document.getElementById('filter-seat').value = st.seat;
+            renderTeacherBackend(false);
+            showToast(`已篩選顯示 ${st.group} ${st.seat} 號同學的數據`, '🔍');
+          });
+          tr.innerHTML = `
+            <td class="py-2.5 px-3 font-bold text-slate-800">${st.group}</td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold">${st.seat} 號</span>
+            </td>
+            <td class="py-2.5 px-3">${st.personalCount} 則</td>
+            <td class="py-2.5 px-3">${st.groupCount} 則</td>
+            <td class="py-2.5 px-3 font-semibold">
+              提問:${st.latestScores.c} / 證據:${st.latestScores.e} / <span class="text-indigo-700 font-bold">深化:${st.latestScores.r}</span>
+            </td>
+            <td class="py-2.5 px-3 text-[11px] font-medium">${st.latestFlag}</td>
+          `;
+          rosterBody.appendChild(tr);
+        });
+      }
+
+      const clsContainer = document.getElementById('classroom-list-container');
+      clsContainer.innerHTML = '';
+      CLASSROOMS.forEach(c => {
+        const isCurrent = c.id === activeClassroomId;
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border transition cursor-pointer ${isCurrent ? 'border-2 border-indigo-600 bg-indigo-50/50 shadow-xs' : 'border-slate-200 hover:border-indigo-300 bg-slate-50'}`;
+        card.addEventListener('click', () => {
+          activeClassroomId = c.id;
+          document.getElementById('filter-classroom').value = c.id;
+          renderStudentInterface();
+          renderTeacherBackend(false);
+          showToast(`已將學生端與後台切換至教室：${c.topic}`, '🏫');
+        });
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-slate-900">${c.topic}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full ${isCurrent ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'} font-semibold">
+              ${isCurrent ? '目前啟用中' : '點擊啟用'}
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-500 mb-1.5">${c.name}</div>
+          <div class="text-[11px] text-slate-600 line-clamp-2 bg-white p-2 rounded border border-slate-200/80 leading-relaxed">${c.material}</div>
+        `;
+        clsContainer.appendChild(card);
+      });
+
+      const logStream = document.getElementById('backend-log-stream');
+      logStream.innerHTML = '';
+      filteredLogs.forEach((l, idx) => {
+        const item = document.createElement('div');
+        item.className = `p-3.5 rounded-xl border ${l.space === 'group' ? 'border-emerald-800 bg-slate-900' : 'border-indigo-800 bg-slate-900/80'} text-xs space-y-2 ${flashNewest && idx === 0 ? 'flash-highlight' : ''}`;
+        item.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <div class="flex items-center gap-1.5">
+              <span class="font-mono font-bold text-amber-300">${l.id}</span>
+              <span class="px-2 py-0.5 rounded font-semibold ${l.space === 'group' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-indigo-500/20 text-indigo-300'}">
+                ${l.space === 'group' ? '👥 小組空間' : '👤 個人空間'}
+              </span>
+              <span class="font-bold text-white">${l.group}・${l.seat} 號同學</span>
+              ${l.isRealLLM ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/30 text-emerald-300 border border-emerald-400/40">Gemini API</span>' : '<span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-300">模擬引擎</span>'}
+            </div>
+            <span class="text-slate-400 font-mono">${l.timestamp}</span>
+          </div>
+          <div class="text-slate-200 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <div class="text-indigo-300 font-semibold mb-0.5">學生提問／發言：</div>
+            ${l.rawText}
+          </div>
+          ${l.aiReply ? `
+          <div class="text-slate-300 bg-slate-900/90 p-2.5 rounded-lg border border-slate-800/80 text-[11px] leading-relaxed">
+            <div class="text-emerald-400 font-semibold mb-0.5">AI 回應摘要：</div>
+            ${l.aiReply.slice(0, 150)}${l.aiReply.length > 150 ? '...' : ''}
+          </div>` : ''}
+          <div class="flex flex-wrap items-center gap-1.5 text-[10px] pt-0.5">
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-sky-300 border border-slate-700">鷹架: ${l.scaffold}</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-purple-300 border border-slate-700">KB編碼: ${l.kbMove}</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-700">維度分: 提問=${l.scores?.c || 2} 證據=${l.scores?.e || 2} 深化=${l.scores?.r || 1}</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-emerald-300 border border-slate-700">${l.flag}</span>
+          </div>
+        `;
+        logStream.appendChild(item);
+      });
+
+      updateTeacherCharts(filteredLogs);
+    }
+
+    // ==================== 9. CHARTS UPDATE ====================
+    function updateTeacherCharts(logs) {
+      const pLogs = logs.filter(l => l.space === 'personal');
+      const gLogs = logs.filter(l => l.space === 'group');
+
+      const calcAvg = (arr, key) => arr.length ? +(arr.reduce((s, x) => s + (x.scores?.[key] || 1), 0) / arr.length).toFixed(2) : 0;
+
+      const pData = [calcAvg(pLogs, 'c'), calcAvg(pLogs, 'e'), calcAvg(pLogs, 'r')];
+      const gData = [calcAvg(gLogs, 'c'), calcAvg(gLogs, 'e'), calcAvg(gLogs, 'r')];
+
+      const ctx1 = document.getElementById('chart-cer-bars').getContext('2d');
+      if (cerBarChart) {
+        cerBarChart.data.datasets[0].data = pData;
+        cerBarChart.data.datasets[1].data = gData;
+        cerBarChart.update();
+      } else {
+        cerBarChart = new Chart(ctx1, {
+          type: 'bar',
+          data: {
+            labels: ['問題探索與提問', '觀察與證據連結', '想法深化度 (Idea Depth)'],
+            datasets: [
+              { label: '👤 個人空間平均', data: pData, backgroundColor: '#4f46e5', borderRadius: 6 },
+              { label: '👥 小組空間平均', data: gData, backgroundColor: '#10b981', borderRadius: 6 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { beginAtZero: true, max: 3, ticks: { stepSize: 1 } }
+            }
+          }
+        });
+      }
+
+      const scafLabels = ['❓ 好奇提問', '📚 科學常識', '🧪 實驗操作', '🔍 分享觀察', '💡 我的想法', '🚀 超越整合'];
+      const scafCounts = [
+        logs.filter(l => l.scaffold.includes('提問') || l.scaffold.includes('好奇')).length,
+        logs.filter(l => l.scaffold.includes('知識') || l.scaffold.includes('常識')).length,
+        logs.filter(l => l.scaffold.includes('實驗') || l.scaffold.includes('操作')).length,
+        logs.filter(l => l.scaffold.includes('觀察') || l.scaffold.includes('發現')).length,
+        logs.filter(l => l.scaffold.includes('想法') || l.scaffold.includes('猜測')).length,
+        logs.filter(l => l.scaffold.includes('超越') || l.scaffold.includes('整合')).length
+      ];
+
+      const ctx2 = document.getElementById('chart-scaffold-dist').getContext('2d');
+      if (scaffoldPieChart) {
+        scaffoldPieChart.data.datasets[0].data = scafCounts;
+        scaffoldPieChart.update();
+      } else {
+        scaffoldPieChart = new Chart(ctx2, {
+          type: 'bar',
+          data: {
+            labels: scafLabels,
+            datasets: [
+              {
+                label: '使用次數',
+                data: scafCounts,
+                backgroundColor: ['#f43f5e', '#3b82f6', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981'],
+                borderRadius: 6
+              }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { beginAtZero: true, ticks: { stepSize: 1 } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+    }
+
+    // ==================== 10. LAYOUT MODE SWITCHER ====================
+    function setLayoutMode(mode) {
+      currentLayoutMode = mode;
+      const mainGrid = document.getElementById('main-grid');
+      const pStudent = document.getElementById('panel-student');
+      const pTeacher = document.getElementById('panel-teacher');
+
+      const bStu = document.getElementById('mode-btn-student');
+      const bTea = document.getElementById('mode-btn-teacher');
+      const bSpl = document.getElementById('mode-btn-split');
+
+      [bStu, bTea, bSpl].forEach(b => {
+        b.className = 'px-3 py-1.5 rounded-lg font-semibold transition text-slate-600 hover:text-slate-900 cursor-pointer';
+      });
+
+      if (mode === 'student') {
+        bStu.className = 'px-3 py-1.5 rounded-lg font-semibold transition bg-white text-indigo-700 shadow-xs cursor-pointer';
+        mainGrid.className = 'flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 grid grid-cols-1 gap-5';
+        pStudent.className = 'w-full max-w-3xl mx-auto flex flex-col gap-3';
+        pTeacher.classList.add('hidden');
+        pStudent.classList.remove('hidden');
+      } else if (mode === 'teacher') {
+        bTea.className = 'px-3 py-1.5 rounded-lg font-semibold transition bg-white text-indigo-700 shadow-xs cursor-pointer';
+        mainGrid.className = 'flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 grid grid-cols-1 gap-5';
+        pStudent.classList.add('hidden');
+        pTeacher.classList.remove('hidden');
+        pTeacher.className = 'w-full flex flex-col gap-4';
+        renderTeacherBackend(false);
+      } else {
+        bSpl.className = 'px-3 py-1.5 rounded-lg font-semibold transition bg-white text-indigo-700 shadow-xs cursor-pointer';
+        mainGrid.className = 'flex-1 max-w-[1600px] w-full mx-auto p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4';
+        pStudent.classList.remove('hidden');
+        pTeacher.classList.remove('hidden');
+        pStudent.className = 'lg:col-span-6 w-full flex flex-col gap-3';
+        pTeacher.className = 'lg:col-span-6 w-full flex flex-col gap-4';
+        renderTeacherBackend(false);
+      }
+    }
+
+    // ==================== 11. EVENT LISTENERS ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('input-api-key').value = geminiConfig.apiKey;
+      document.getElementById('select-gemini-model').value = geminiConfig.model;
+      updateApiStatusBadge();
+
+      document.getElementById('mode-btn-student').addEventListener('click', () => setLayoutMode('student'));
+      document.getElementById('mode-btn-teacher').addEventListener('click', () => setLayoutMode('teacher'));
+      document.getElementById('mode-btn-split').addEventListener('click', () => setLayoutMode('split'));
+
+      const openApiModal = () => {
+        document.getElementById('input-api-key').value = geminiConfig.apiKey;
+        document.getElementById('select-gemini-model').value = geminiConfig.model;
+        document.getElementById('api-test-result').classList.add('hidden');
+        document.getElementById('api-modal').classList.remove('hidden');
+        document.getElementById('api-modal').classList.add('flex');
+      };
+      const closeApiModal = () => {
+        document.getElementById('api-modal').classList.add('hidden');
+        document.getElementById('api-modal').classList.remove('flex');
+      };
+
+      document.getElementById('btn-open-api-modal').addEventListener('click', openApiModal);
+      document.getElementById('btn-header-setup-api').addEventListener('click', openApiModal);
+      document.getElementById('btn-close-api-modal').addEventListener('click', closeApiModal);
+
+      document.getElementById('btn-toggle-key-vis').addEventListener('click', () => {
+        const input = document.getElementById('input-api-key');
+        const btn = document.getElementById('btn-toggle-key-vis');
+        if (input.type === 'password') {
+          input.type = 'text';
+          btn.textContent = '隱藏';
+        } else {
+          input.type = 'password';
+          btn.textContent = '顯示';
+        }
+      });
+
+      document.getElementById('select-gemini-model').addEventListener('change', (e) => {
+        const customWrapper = document.getElementById('custom-model-wrapper');
+        if (e.target.value === 'custom') {
+          customWrapper.classList.remove('hidden');
+          document.getElementById('input-custom-model').focus();
+        } else {
+          customWrapper.classList.add('hidden');
+        }
+      });
+
+      document.getElementById('btn-fetch-account-models').addEventListener('click', async () => {
+        const key = document.getElementById('input-api-key').value.trim();
+        const resBox = document.getElementById('api-test-result');
+        resBox.classList.remove('hidden');
+
+        if (!key) {
+          resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-rose-100 text-rose-800';
+          resBox.textContent = '請先填入 API Key 再查詢！';
+          return;
+        }
+
+        resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-indigo-50 text-indigo-800';
+        resBox.textContent = '正在向 Google 官方查詢您帳號可用的模型清單...';
+
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error?.message || `HTTP ${res.status}`);
+          }
+          const data = await res.json();
+          const availableModels = (data.models || [])
+            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => m.name.replace(/^models\//, ''));
+
+          if (availableModels.length === 0) {
+            throw new Error('未查得支援 generateContent 的模型');
+          }
+
+          const selectEl = document.getElementById('select-gemini-model');
+          selectEl.innerHTML = '';
+          availableModels.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = `${m} (官方已開通)`;
+            if (m.includes('1.5-flash') || m.includes('2.0-flash')) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+
+          resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-emerald-100 text-emerald-800';
+          resBox.innerHTML = `✅ 成功取得您帳號支援的 <strong>${availableModels.length}</strong> 個官方模型！已自動更新下拉選單。`;
+          showToast(`已載入 ${availableModels.length} 個可用 Gemini 模型`, '🎉');
+        } catch (err) {
+          resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-rose-100 text-rose-800';
+          resBox.textContent = `❌ 查詢失敗：${err.message}`;
+        }
+      });
+
+      document.getElementById('btn-test-api-connection').addEventListener('click', async () => {
+        const key = document.getElementById('input-api-key').value.trim();
+        let model = document.getElementById('select-gemini-model').value;
+        if (model === 'custom') {
+          model = document.getElementById('input-custom-model').value.trim() || 'gemini-1.5-flash';
+        }
+        const resBox = document.getElementById('api-test-result');
+        resBox.classList.remove('hidden');
+        resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-slate-100 text-slate-700';
+        resBox.textContent = '連線測試中...';
+
+        if (!key) {
+          resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-rose-100 text-rose-800';
+          resBox.textContent = '請先填入 API Key！';
+          return;
+        }
+
+        try {
+          const cleanModel = model.replace(/^models\//, '');
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${key}`;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: '請只回覆五個字：連線測試成功' }] }]
+            })
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error?.message || `HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-emerald-100 text-emerald-800';
+          resBox.innerHTML = `✅ 連線成功！Google Gemini 官方 (${cleanModel}) 原生回應：<strong>${reply.trim()}</strong>`;
+        } catch (e) {
+          resBox.className = 'p-2.5 rounded-xl text-xs font-medium bg-rose-100 text-rose-800 space-y-1.5';
+          resBox.innerHTML = `<div>❌ <strong>連線失敗：</strong>${e.message}</div>
+            <div class="text-[11px] text-slate-700">建議點擊上方的「<strong>🔄 查詢我的帳號可用模型</strong>」，讓系統自動為您選擇已開通的官方模型版本。</div>`;
+        }
+      });
+
+      document.getElementById('btn-save-api-key').addEventListener('click', () => {
+        const key = document.getElementById('input-api-key').value.trim();
+        let model = document.getElementById('select-gemini-model').value;
+        if (model === 'custom') {
+          model = document.getElementById('input-custom-model').value.trim() || 'gemini-1.5-flash';
+        }
+        geminiConfig.apiKey = key;
+        geminiConfig.model = model;
+        try {
+          localStorage.setItem('gemini_kb_api_key', key);
+          localStorage.setItem('gemini_kb_model', model);
+        } catch (e) {
+          console.warn('localStorage access failed:', e);
+        }
+        updateApiStatusBadge();
+        closeApiModal();
+        showToast(key ? `🎉 已成功儲存並啟用 Gemini API (${model})！` : '已儲存設定', '🔑');
+      });
+
+      document.getElementById('btn-clear-api-key').addEventListener('click', () => {
+        geminiConfig.apiKey = '';
+        try {
+          localStorage.removeItem('gemini_kb_api_key');
+        } catch (e) {}
+        document.getElementById('input-api-key').value = '';
+        updateApiStatusBadge();
+        closeApiModal();
+        showToast('已清除 API Key，系統已切回內建智慧模擬引擎', 'ℹ️');
+      });
+
+      document.getElementById('student-classroom-select').addEventListener('change', e => {
+        activeClassroomId = e.target.value;
+        document.getElementById('filter-classroom').value = activeClassroomId;
+        renderStudentInterface();
+        renderTeacherBackend(false);
+        showToast(`已切換至課程：${getActiveClassroom().topic}`, '📘');
+      });
+
+      const updateIdentity = () => {
+        currentGroup = document.getElementById('student-group-input').value;
+        currentSeat = document.getElementById('student-seat-input').value.trim() || '12';
+        renderStudentInterface();
+        showToast(`目前已登入為：${currentGroup}・${currentSeat} 號同學`, '👤');
+      };
+      document.getElementById('btn-apply-student-id').addEventListener('click', updateIdentity);
+      document.getElementById('student-group-input').addEventListener('change', updateIdentity);
+
+      document.getElementById('btn-toggle-material').addEventListener('click', () => {
+        document.getElementById('student-material-drawer').classList.toggle('hidden');
+      });
+      document.getElementById('btn-close-material').addEventListener('click', () => {
+        document.getElementById('student-material-drawer').classList.add('hidden');
+      });
+
+      document.getElementById('chat-space-personal').addEventListener('click', () => {
+        currentChatSpace = 'personal';
+        renderStudentInterface();
+      });
+      document.getElementById('chat-space-group').addEventListener('click', () => {
+        currentChatSpace = 'group';
+        renderStudentInterface();
+      });
+
+      document.querySelectorAll('.scaffold-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window._activeScaffoldChip = btn.getAttribute('data-scaffold');
+          const prefix = btn.getAttribute('data-prefix');
+          const inp = document.getElementById('student-chat-input');
+          inp.value = prefix;
+          inp.focus();
+        });
+      });
+
+      document.getElementById('btn-student-send').addEventListener('click', () => sendStudentMessage());
+      document.getElementById('student-chat-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendStudentMessage();
+        }
+      });
+
+      document.getElementById('btn-test-replace').addEventListener('click', () => {
+        sendStudentMessage('保麗龍可以用什麼取代？', '📚 [科學知識]');
+      });
+      document.getElementById('btn-test-what-is').addEventListener('click', () => {
+        sendStudentMessage('保麗龍是什麼？', '📚 [科學知識]');
+      });
+      document.getElementById('btn-test-heat').addEventListener('click', () => {
+        sendStudentMessage('我想要知道保麗龍預熱會有什麼樣的反應？', '❓ [好奇提問]');
+      });
+      document.getElementById('btn-test-category').addEventListener('click', () => {
+        sendStudentMessage('我想知道保麗龍有分類嗎？', '📚 [科學知識]');
+      });
+      document.getElementById('btn-quick-misconception').addEventListener('click', () => {
+        const cls = getActiveClassroom();
+        sendStudentMessage(cls.sampleMisconception, '❓ [好奇提問]');
+      });
+      document.getElementById('btn-quick-circular').addEventListener('click', () => {
+        const cls = getActiveClassroom();
+        sendStudentMessage(cls.sampleCircular, '🧪 [實驗與操作]');
+      });
+      document.getElementById('btn-quick-riseabove').addEventListener('click', () => {
+        const cls = getActiveClassroom();
+        sendStudentMessage(cls.sampleRiseAbove, '🚀 [超越整合]');
+      });
+
+      const tTabs = [
+        { btn: 'ttab-btn-monitor', view: 'tview-monitor' },
+        { btn: 'ttab-btn-classrooms', view: 'tview-classrooms' },
+        { btn: 'ttab-btn-logs', view: 'tview-logs' }
+      ];
+      tTabs.forEach(({ btn, view }) => {
+        document.getElementById(btn).addEventListener('click', () => {
+          tTabs.forEach(item => {
+            document.getElementById(item.view).classList.add('hidden');
+            document.getElementById(item.btn).className = 'py-2 px-3 rounded-lg font-bold transition text-slate-300 hover:text-white cursor-pointer';
+          });
+          document.getElementById(view).classList.remove('hidden');
+          document.getElementById(btn).className = 'py-2 px-3 rounded-lg font-bold transition bg-indigo-600 text-white cursor-pointer';
+          renderTeacherBackend(false);
+        });
+      });
+
+      document.getElementById('filter-classroom').addEventListener('change', e => {
+        activeClassroomId = e.target.value;
+        renderStudentInterface();
+        renderTeacherBackend(false);
+      });
+      document.getElementById('filter-group').addEventListener('change', () => renderTeacherBackend(false));
+      document.getElementById('filter-seat').addEventListener('change', () => renderTeacherBackend(false));
+
+      document.getElementById('btn-fill-sample-class').addEventListener('click', () => {
+        document.getElementById('new-cls-name').value = '八年二班・理化探究 (CLS-104)';
+        document.getElementById('new-cls-topic').value = '自製保溫瓶：影響熱傳播快慢的因素';
+        document.getElementById('new-cls-material').value =
+          '【科學背景】\n熱傳播方式分為三種：傳導（需介質接觸）、對流（流體流動）、輻射（不需介質，電磁波形式）。空氣是不良導熱體，光亮表面可有效反射輻射熱。\n【實驗數據】\n包裹 80°C 熱水燒杯 15 分鐘後：\n- 氣泡布＋鋁箔紙雙層包覆：水溫 68°C（保溫效果最佳）\n- 單純黑色棉布：水溫 55°C\n- 無包覆對照組：水溫 48°C\n【探究核心】氣泡布內的空氣阻擋了哪種熱傳播？鋁箔紙阻擋了哪種？';
+        document.getElementById('new-cls-concepts').value = '熱傳導, 熱對流, 熱輻射, 空氣絕熱, 反射輻射熱, 控制變因';
+        document.getElementById('new-cls-misconceptions').value = '鋁箔紙會自己發熱, 棉布會產生熱量, 冷氣跑進去';
+        document.getElementById('new-cls-prompt').value = '若問三種熱傳播定義直接解答；若問哪種包覆最好請引導看數據。';
+        showToast('已帶入「自製保溫瓶：熱傳播探究」範例教材！', '✨');
+      });
+
+      document.getElementById('btn-create-classroom').addEventListener('click', () => {
+        const name = document.getElementById('new-cls-name').value.trim();
+        const topic = document.getElementById('new-cls-topic').value.trim();
+        const material = document.getElementById('new-cls-material').value.trim();
+        const conceptsStr = document.getElementById('new-cls-concepts').value.trim();
+        const misStr = document.getElementById('new-cls-misconceptions').value.trim();
+        const promptGuidance = document.getElementById('new-cls-prompt').value.trim();
+
+        if (!name || !topic || !material) {
+          showToast('請填寫「教室名稱」、「探究主題」與「本堂課教材內容」！', '⚠️');
+          return;
+        }
+
+        const newId = 'CLS-' + (101 + CLASSROOMS.length);
+        const concepts = conceptsStr ? conceptsStr.split(/[,，、]/).map(s => s.trim()).filter(Boolean) : ['對照組', '變因', '原理'];
+        const misconceptions = misStr ? misStr.split(/[,，、]/).map(s => s.trim()).filter(Boolean) : ['直覺猜測'];
+
+        const newCls = {
+          id: newId,
+          name: `${name} (${newId})`,
+          topic,
+          material,
+          concepts,
+          misconceptions,
+          promptGuidance,
+          sampleMisconception: `❓ [好奇提問] 我想請問為什麼會出現這個現象？是不是因為「${misconceptions[0] || '材質本身會自己產生能量'}」造成的？`,
+          sampleCircular: `🧪 [實驗與操作] 關於「${topic}」，如果我們想要設計對照實驗進一步確認，操作步驟上應該注意固定哪些條件？`,
+          sampleRiseAbove: `🚀 [超越整合] 把大家的發現跟討論整合起來，我們認為更合理的解釋是：透過實驗與對照組比較，關鍵機制在於「${concepts.slice(0, 3).join('、')}」，而非${misconceptions[0] || '表面直覺現象'}！`
+        };
+
+        CLASSROOMS.unshift(newCls);
+        activeClassroomId = newId;
+
+        document.getElementById('new-cls-name').value = '';
+        document.getElementById('new-cls-topic').value = '';
+        document.getElementById('new-cls-material').value = '';
+
+        renderStudentInterface();
+        renderTeacherBackend(false);
+        showToast(`🎉 成功建立新教室「${topic}」！學生端與後台已同步啟用。`, '🏫');
+      });
+
+      document.getElementById('btn-export-modal').addEventListener('click', () => {
+        const modal = document.getElementById('export-modal');
+        document.getElementById('export-content-pre').textContent = JSON.stringify(codingLogs, null, 2);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      });
+      document.getElementById('btn-close-export').addEventListener('click', () => {
+        const modal = document.getElementById('export-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      });
+
+      const getCsvContent = () => {
+        const headers = ['LogID', 'ClassroomID', 'Timestamp', 'Space', 'Group', 'Seat', 'Scaffold', 'Question_Score', 'Evidence_Score', 'Depth_Score', 'KB_Move', 'Flag', 'RawText', 'AIReply'];
+        const rows = codingLogs.map(l => [
+          l.id, l.classroomId, l.timestamp, l.space, l.group, l.seat,
+          `"${l.scaffold}"`, l.scores?.c || 2, l.scores?.e || 2, l.scores?.r || 1,
+          `"${l.kbMove}"`, `"${l.flag}"`,
+          `"${(l.rawText || '').replace(/"/g, '""')}"`,
+          `"${(l.aiReply || '').replace(/"/g, '""')}"`
+        ].join(','));
+        return [headers.join(','), ...rows].join('\n');
+      };
+
+      document.getElementById('btn-copy-json').addEventListener('click', () => {
+        const str = JSON.stringify(codingLogs, null, 2);
+        try {
+          navigator.clipboard.writeText(str);
+        } catch (e) {
+          const ta = document.createElement('textarea');
+          ta.value = str; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        }
+        showToast('已複製 JSON 研究數據至剪貼簿！', '📋');
+      });
+
+      document.getElementById('btn-copy-csv').addEventListener('click', () => {
+        const str = getCsvContent();
+        try {
+          navigator.clipboard.writeText(str);
+        } catch (e) {
+          const ta = document.createElement('textarea');
+          ta.value = str; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        }
+        showToast('已複製 CSV 表格數據至剪貼簿！', '📊');
+      });
+
+      document.getElementById('btn-download-csv').addEventListener('click', () => {
+        const str = getCsvContent();
+        const blob = new Blob(["\uFEFF" + str], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `KB_Inquiry_Research_Data_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('已開始下載 CSV 研究數據檔案！', '⬇️');
+      });
+
+      renderStudentInterface();
+      renderTeacherBackend(false);
+    });
+  </script>
+</body>
+</html>
